@@ -1,44 +1,20 @@
 import streamlit as st
 import requests
-import pyttsx3
-import speech_recognition as sr
 from PIL import Image
 import io
 from datetime import datetime
-import webbrowser
-import threading
 
 # Set Streamlit page config
 st.set_page_config(page_title="Weather App", layout="centered")
 
-# Initialize pyttsx3 engine
-engine = pyttsx3.init()
-
-# Speak function with threading
+# Speak using browser (JavaScript)
 def speak(text):
-    def run():
-        engine.say(text)
-        engine.runAndWait()
-    threading.Thread(target=run).start()
-
-# Speech recognition function
-def recognize_speech():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        speak("Please say the name of the city.")
-        try:
-            recognizer.adjust_for_ambient_noise(source)
-            audio = recognizer.listen(source, timeout=5)
-            city = recognizer.recognize_google(audio)
-            speak(f"You said {city}.")
-            return city
-        except sr.UnknownValueError:
-            speak("Sorry, I could not understand what you said.")
-        except sr.RequestError:
-            speak("Could not request results from the speech service.")
-        except sr.WaitTimeoutError:
-            speak("Listening timed out. Please try again.")
-    return None
+    st.markdown(f"""
+        <script>
+        var msg = new SpeechSynthesisUtterance("{text}");
+        window.speechSynthesis.speak(msg);
+        </script>
+    """, unsafe_allow_html=True)
 
 # Get weather data from API
 def get_weather(city):
@@ -80,65 +56,35 @@ def get_weather(city):
         return None
 
 # UI layout
-st.title("🌦️ Weather App with Voice & Map")
-st.markdown("Get real-time weather updates using voice or text input.")
+st.title("🌦️ Weather App with Browser Voice")
+st.markdown("Get real-time weather updates. Your browser will read them aloud!")
 
 # Text input
 city = st.text_input("Enter city name")
 
 # Buttons
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Get Weather"):
-        if city:
-            report = get_weather(city)
-            if report:
-                st.image(report["icon"], width=100)
-                st.markdown(f"### Weather in {report['city']}")
-                st.write(f"**Date & Time:** {report['timestamp']}")
-                st.write(f"**Temperature:** {report['temp']}°C")
-                st.write(f"**Condition:** {report['condition'].title()}")
-                st.write(f"**Humidity:** {report['humidity']}%")
-                st.write(f"**Wind Speed:** {report['wind']} m/s")
+if st.button("Get Weather"):
+    if city:
+        report = get_weather(city)
+        if report:
+            st.image(report["icon"], width=100)
+            st.markdown(f"### Weather in {report['city']}")
+            st.write(f"**Date & Time:** {report['timestamp']}")
+            st.write(f"**Temperature:** {report['temp']}°C")
+            st.write(f"**Condition:** {report['condition'].title()}")
+            st.write(f"**Humidity:** {report['humidity']}%")
+            st.write(f"**Wind Speed:** {report['wind']} m/s")
 
-                speak(
-                    f"The weather in {report['city']} is {report['condition']}, "
-                    f"temperature {report['temp']} degrees Celsius, "
-                    f"humidity {report['humidity']} percent, "
-                    f"and wind speed {report['wind']} meters per second."
-                )
+            speak(
+                f"The weather in {report['city']} is {report['condition']}, "
+                f"temperature {report['temp']} degrees Celsius, "
+                f"humidity {report['humidity']} percent, "
+                f"and wind speed {report['wind']} meters per second."
+            )
 
-                map_url = f"https://www.google.com/maps/search/{report['city']}"
-                st.markdown(f"[🗺️ Show on Google Maps]({map_url})", unsafe_allow_html=True)
-            else:
-                st.error("City not found.")
+            map_url = f"https://www.google.com/maps/search/{report['city']}"
+            st.markdown(f"[🗺️ Show on Google Maps]({map_url})", unsafe_allow_html=True)
         else:
-            st.warning("Please enter a city name.")
-
-with col2:
-    if st.button("🎤 Speak City Name"):
-        city_from_voice = recognize_speech()
-        if city_from_voice:
-            st.success(f"You said: {city_from_voice}")
-            report = get_weather(city_from_voice)
-            if report:
-                st.image(report["icon"], width=100)
-                st.markdown(f"### Weather in {report['city']}")
-                st.write(f"**Date & Time:** {report['timestamp']}")
-                st.write(f"**Temperature:** {report['temp']}°C")
-                st.write(f"**Condition:** {report['condition'].title()}")
-                st.write(f"**Humidity:** {report['humidity']}%")
-                st.write(f"**Wind Speed:** {report['wind']} m/s")
-
-                speak(
-                    f"The weather in {report['city']} is {report['condition']}, "
-                    f"temperature {report['temp']} degrees Celsius, "
-                    f"humidity {report['humidity']} percent, "
-                    f"and wind speed {report['wind']} meters per second."
-                )
-
-                map_url = f"https://www.google.com/maps/search/{report['city']}"
-                st.markdown(f"[🗺️ Show on Google Maps]({map_url})", unsafe_allow_html=True)
-            else:
-                st.error("City not found.")
-
+            st.error("City not found.")
+    else:
+        st.warning("Please enter a city name.")
